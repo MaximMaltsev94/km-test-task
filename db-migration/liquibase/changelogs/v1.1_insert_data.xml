@@ -1,0 +1,33 @@
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+        xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+        http://www.liquibase.org/xml/ns/dbchangelog-ext
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+        http://www.liquibase.org/xml/ns/pro
+        http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
+
+    <changeSet id="20260911-v1.1-001" author="mmaltsau">
+        <insert tableName="counters">
+            <column name="name" value="c001" />
+            <column name="value" value="15" />
+        </insert>
+    </changeSet>
+    <changeSet id="20260911-v1.1-002" author="mmaltsau">
+
+        <insert tableName="counters">
+            <column name="name" value="c002" />
+            <column name="value" value="200" />
+        </insert>
+    </changeSet>
+    <changeSet id="20260911-v1.1-003" author="mmaltsau">
+        <insert tableName="counters">
+            <column name="name" value="c003" />
+            <column name="value" value="5" />
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

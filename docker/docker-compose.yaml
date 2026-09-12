@@ -1,0 +1,47 @@
+services:
+  app-client:
+    image: "km-test-task-client:latest"
+    stdin_open: true
+    tty: true
+    environment:
+      APP_HOST: "http://app-server:8080"
+    depends_on:
+      - app-server
+    links:
+      - "app-server:app-server"
+
+  app-server:
+    image: "km-test-task-server:latest"
+    environment:
+      PG_CONNECTION_STRING: "r2dbc:postgresql://app-db:5432/postgres"
+      PG_HOST: "app-db"
+      PG_PORT: "5432"
+      PG_DB_NAME: "postgres"
+      PG_USER: postgres
+      PG_PASSWORD: postgres
+    depends_on:
+      - db-migration
+      - app-db
+    ports:
+      - "44555:8080"
+    links:
+      - "app-db:app-db"
+      - "db-migration:db-migration"
+
+  db-migration:
+    image: "km-test-task-db-migration:latest"
+    environment:
+      LIQUIBASE_COMMAND_URL: "jdbc:postgresql://app-db:5432/postgres"
+      LIQUIBASE_COMMAND_USERNAME: "postgres"
+      LIQUIBASE_COMMAND_PASSWORD: "postgres"
+    depends_on:
+      - app-db
+    links:
+      - "app-db:app-db"
+
+  app-db:
+    image: "postgres:17.11"
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+    ports:
+      - "18999:5432"

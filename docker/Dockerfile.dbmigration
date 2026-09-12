@@ -1,0 +1,9 @@
+FROM liquibase/liquibase:5.0.4
+
+RUN lpm add postgresql --global
+
+WORKDIR /tmp/liquibase
+
+COPY workdir/liquibase/ /tmp/
+
+ENTRYPOINT ["liquibase", "update", "--changelog-file", "liquibase_main.xml"]

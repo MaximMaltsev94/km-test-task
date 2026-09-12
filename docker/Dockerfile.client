@@ -1,0 +1,5 @@
+FROM eclipse-temurin:25-jre
+
+COPY workdir/client.jar /opt/client.jar
+
+ENTRYPOINT ["java", "-jar" , "/opt/client.jar"]

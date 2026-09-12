@@ -1,0 +1,20 @@
+ktor:
+  deployment:
+    port: 8080
+  application:
+    modules:
+      - edu.mmaltsau.interviews.server.HttpKt.configureHttp
+      - edu.mmaltsau.interviews.server.SerializationKt.configureSerialization
+      - edu.mmaltsau.interviews.server.GlobalExceptionHandlerKt.configureExceptionHandling
+      - edu.mmaltsau.interviews.server.DatabaseKt.configureDatabase
+      - edu.mmaltsau.interviews.domain.greeting.GreetingRoutesKt.greetingRoutes
+      - edu.mmaltsau.interviews.domain.greeting.GreetingDiKt.greetingDi
+      - edu.mmaltsau.interviews.domain.dictionary.DictionaryDiKt.dictionaryDi
+      - edu.mmaltsau.interviews.domain.dictionary.controller.DictionaryRoutesKt.dictionaryRoutes
+postgres:
+  connectionString: "$PG_CONNECTION_STRING:r2dbc:postgresql://localhost:18999/postgres"
+  host: "$PG_HOST:localhost"
+  port: "$PG_PORT:18999"
+  dbName: "$PG_DB_NAME:postgres"
+  user: "$PG_USER:postgres"
+  password: "$PG_PASSWORD:postgres"

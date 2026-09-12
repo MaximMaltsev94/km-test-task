@@ -1,0 +1,24 @@
+### Custom ###
+docker/workdir
+
+### Gradle ###
+.gradle/
+build/
+**/build/
+.gradletasknamecache
+local.properties
+
+# Do not ignore the Gradle Wrapper jar structure
+!gradle/wrapper/gradle-wrapper.jar
+
+### Kotlin ###
+.kotlin/
+
+### IntelliJ IDEA / Android Studio ###
+.idea/**
+*.iml
+out/
+
+### OS Generated Files ###
+.DS_Store
+Thumbs.db
