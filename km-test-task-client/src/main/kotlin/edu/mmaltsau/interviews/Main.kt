@@ -75,7 +75,7 @@ suspend fun runMenu(
 
 fun printHelp(log: Logger) {
     log.info(
-        """
+        """\n
     === Available Commands ===
     1    - Print all counters
     2    - Concurrent Increment scenario - correct concurrency control

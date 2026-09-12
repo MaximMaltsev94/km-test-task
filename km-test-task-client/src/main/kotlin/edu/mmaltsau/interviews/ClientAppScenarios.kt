@@ -13,6 +13,13 @@ import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
+
+data class CreateResult(
+    val counterName: String,
+    val value: Int,
+    val success: Boolean
+) {}
+
 class ClientAppScenarios(
     private val countersV1RestClient: CountersV1RestClient
 ) {
@@ -63,17 +70,36 @@ class ClientAppScenarios(
                     countersV1RestClient.create(counterName, initialValue)
 
                     log.info("Successfully created counter #{} with initial value {}", it, initialValue)
-                    return@async 1
+                    return@async CreateResult(counterName, initialValue, true)
                 } catch (e: Exception) {
                     log.info("Failed to create counter #{} with initial value {}", it, initialValue)
-                    return@async 0
+                    return@async CreateResult(counterName, initialValue, false)
                 }
             }
         }
 
         val executionResults = coroutines.awaitAll()
+        val successfullyCreatedCounter = executionResults.firstOrNull { it.success }
 
-        log.info("Finished executing coroutines with total successful executions: {}", executionResults.sum())
+        val successfulAttempts = executionResults.count { it.success }
+        val failedAttempts = executionResults.count { !it.success }
+
+        val actualCounter = countersV1RestClient.get(counterName)
+
+        log.info("Finished executing coroutines with total successful executions: {}", successfulAttempts)
+        log.info(
+            """\n
+            Finished concurrent creation of items:
+            Counter name:         {}
+            total requests:       {}
+            successful requests:  {}
+            failed requests:      {}
+            actual counter:       {}
+            expected counter:     {}
+        """.trimIndent(),
+            counterName, concurrency, successfulAttempts, failedAttempts,
+            actualCounter.value, successfullyCreatedCounter?.value ?: -1
+        )
     }
 
 
@@ -96,7 +122,7 @@ class ClientAppScenarios(
         val concurrency = 300
         val incrementValue = 1
         log.info(
-            """
+            """\n
             Incrementing counter concurrently:
             times:          {} increment cycles
             concurrency:    {} concurrent requests per cycle
@@ -129,11 +155,14 @@ class ClientAppScenarios(
         val expectedIncrement = numAttempts * concurrency * incrementValue
         val expectedValue = initialValue + expectedIncrement
         log.info(
-            "Incremented counter {}: \n " +
-                    "initialValue:       {} \n" +
-                    "expectedIncrement:  {} \n" +
-                    "expectedValue:      {} \n" +
-                    "actualValue:        {} \n",
+            """\n
+            Finished counter increment:
+            Counter name:         {}
+            Initial value:        {}
+            expected increment:   {}
+            expected value:       {}
+            actual value:         {}
+            """.trimIndent(),
             counterName, initialValue, expectedIncrement, expectedValue, incrementedCounter.value
         )
 

@@ -109,7 +109,7 @@ Application runs infinitely until `quit` command is entered.
 Type command number (e.g. `3`) in console to execute.
 - once command completed menu will be opened again
 
-```shell
+```
 === Available Commands ===
 1    - Print all counters
 2    - Concurrent Increment scenario - correct concurrency control
@@ -119,4 +119,60 @@ help - Display this help menu (or 'h')
 quit - Exit the application (or 'q')
 ==========================
 Enter command > 
+```
+#### 5.2.2 CLI commands overview
+
+##### Print all counters
+
+Invokes get all API and prints all counters to console
+
+##### Concurrent Increment scenario - correct concurrency control
+
+1. Creates new counter with UUID as name and random initial value (from 100 to 1000)
+2. Spawns 300 concurrent coroutines. Coroutines wait for signal on `CompletableDeferred` object
+3. Main thread completes Completable
+4. 300 coroutines send increment API call
+5. Main thread repeats steps 1-4 100 times
+6. Main thread prints report with actual / expected counter value
+```
+Finished counter increment:
+Counter name:         c69eff3a-d0ff-4b88-82eb-75db3850a80a
+Initial value:        496
+expected increment:   30000
+expected value:       30496
+actual value:         30496
+```
+
+##### Concurrent Increment scenario - unsafe update operation
+
+Same as command `2`, but API without concurrency control is used. Lost updates possible
+```
+Finished counter increment:
+Counter name:         bde42eeb-7a0c-49ad-8872-c0719b0f001b
+Initial value:        689
+expected increment:   30000
+expected value:       30689
+actual value:         987
+```
+
+##### Concurrent Insert
+1. Generates UUID for counter name
+2. Spawns 300 concurrent coroutines. Coroutines wait for signal on `CompletableDeferred` object
+3. Main thread completes Completable
+4. 300 coroutines send create API call for the generated counter name. Each coroutine generates random initial value
+5. Coroutine checks API response status and resolves Deferred object with success / failed boolean flag and initial counter value
+6. Main thread await all coroutines
+7. Main thread prints statics
+   - number of success / failed coroutines
+   - success counter value
+   - actual counter value
+
+```
+Finished concurrent creation of items:
+Counter name:         5d4b497d-e507-405a-b8d2-6dc9fcb73559
+total requests:       300
+successful requests:  1
+failed requests:      299
+actual counter:       616
+expected counter:     616
 ```

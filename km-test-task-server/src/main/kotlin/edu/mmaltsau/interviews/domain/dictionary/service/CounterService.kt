@@ -6,6 +6,7 @@ import edu.mmaltsau.interviews.server.exceptions.RepositoryInsertConflictExcepti
 import edu.mmaltsau.interviews.server.exceptions.ResourceAlreadyExistsException
 import edu.mmaltsau.interviews.server.exceptions.ResourceNotFoundException
 import kotlinx.coroutines.delay
+import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.milliseconds
 
 interface CounterService {
@@ -23,6 +24,9 @@ interface CounterService {
 }
 
 class CounterServiceImpl(private val counterRepository: CounterRepository) : CounterService {
+    companion object {
+        private val log = LoggerFactory.getLogger(CounterServiceImpl::class.java)
+    }
     override suspend fun getAll(): List<Counter> {
         return counterRepository.findAll()
     }
@@ -54,7 +58,11 @@ class CounterServiceImpl(private val counterRepository: CounterRepository) : Cou
         if (value == null) {
             return 0
         }
-        return counterRepository.increaseValue(name, value)
+        val modifiedCount = counterRepository.increaseValue(name, value)
+        if (modifiedCount == 0) {
+            throw ResourceNotFoundException("Resource counter $name was not updated")
+        }
+        return modifiedCount
     }
 
     override suspend fun incrementUnsafe(
@@ -65,12 +73,13 @@ class CounterServiceImpl(private val counterRepository: CounterRepository) : Cou
             return 0
         }
 
-        val counter = counterRepository.find(name) ?: throw ResourceNotFoundException("Resource not found: $name")
+        val counter = counterRepository.find(name) ?: throw ResourceNotFoundException("Resource counter $name is not found")
 
         // artificial delay to simulate lost update scenario
         delay(10.milliseconds)
 
         val newValue = counter.value + incrementValue
+        log.info("Setting value {} for counter {}", newValue, name)
         return counterRepository.update(name, newValue)
     }
 }
