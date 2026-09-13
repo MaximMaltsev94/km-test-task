@@ -1,5 +1,17 @@
 # KM test task
 
+# Table of Contents
+- [1. Prerequisites](#1-prerequisites)
+- [2. Project structure](#2-project-structure)
+- [3. Docker container description](#3-docker-containers-description)
+- [4. Spin up docker compose test environment](#4-spin-up-docker-compose-test-environment)
+- [5. Use and test application](#5-use-and-test-application)
+  - [5.1 Swagger UI](#51-swagger-ui)
+  - [5.2 CLI for concurrency tests](#52-cli-for-concurrency-tests)
+    - [5.2.1 CLI overview](#521-cli-overview)
+    - [5.2.2 CLI commands overview](#522-cli-commands-overview)
+- [6. API design](#6-api-design)
+
 # 1. Prerequisites
 - JDK 25
 - docker with docker compose plugin
@@ -178,7 +190,7 @@ expected counter:     616
 ```
 
 
-# 6. API design 
+# 6. API design
 
 #### General idea
 - `/api/v1` - versioning
