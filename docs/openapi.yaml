@@ -186,10 +186,12 @@ paths:
       responses:
         "200":
           description: Counter was incremented
-        "204":
-          description: Counter was not incremented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Counter"
         "400":
-          description: Missing request body
+          description: Missing request body or increment value
           content:
             application/json:
               schema:
@@ -229,10 +231,12 @@ paths:
       responses:
         "200":
           description: Counter was incremented
-        "204":
-          description: Counter was not incremented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Counter"
         "400":
-          description: Missing request body
+          description: Missing request body or increment value
           content:
             application/json:
               schema:
