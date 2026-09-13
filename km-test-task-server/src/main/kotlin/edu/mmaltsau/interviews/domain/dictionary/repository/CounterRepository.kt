@@ -6,7 +6,7 @@ interface CounterRepository {
     suspend fun findAll(): List<Counter>
     suspend fun find(name: String): Counter?
     suspend fun insert(name: String, value: Int): Counter
-    suspend fun update(name: String, value: Int): Int
+    suspend fun update(name: String, value: Int): Counter?
     suspend fun delete(name: String): Int
-    suspend fun increaseValue(name: String, incValue: Int): Int
+    suspend fun increaseValue(name: String, incValue: Int): Counter?
 }

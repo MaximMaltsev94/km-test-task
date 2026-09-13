@@ -86,28 +86,28 @@ fun Application.dictionaryRoutes() {
 
                 call.respond(HttpStatusCode.OK, newCounter)
             }.describe {
-                    summary = "Create a new counter"
-                    description = "Creates a counter with the specified name. Does not allow override existing value."
-                    tag("counters")
-                    responses {
-                        HttpStatusCode.OK {
-                            description = "Counter was created"
-                            schema = jsonSchema<Counter>()
-                        }
-                        HttpStatusCode.BadRequest {
-                            description = "Missing request body payload"
-                            schema = jsonSchema<ErrorResponse>()
-                        }
-                        HttpStatusCode.Conflict {
-                            description = "Counter with the specified name already exists"
-                            schema = jsonSchema<ErrorResponse>()
-                        }
-                        HttpStatusCode.InternalServerError {
-                            description = "Internal server error"
-                            schema = jsonSchema<ErrorResponse>()
-                        }
+                summary = "Create a new counter"
+                description = "Creates a counter with the specified name. Does not allow override existing value."
+                tag("counters")
+                responses {
+                    HttpStatusCode.OK {
+                        description = "Counter was created"
+                        schema = jsonSchema<Counter>()
+                    }
+                    HttpStatusCode.BadRequest {
+                        description = "Missing request body payload"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                    HttpStatusCode.Conflict {
+                        description = "Counter with the specified name already exists"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                    HttpStatusCode.InternalServerError {
+                        description = "Internal server error"
+                        schema = jsonSchema<ErrorResponse>()
                     }
                 }
+            }
 
 
             delete("/counters/{counterName}") {
@@ -129,7 +129,8 @@ fun Application.dictionaryRoutes() {
                         description = "Counter with the specified name was deleted. Response body is empty."
                     }
                     HttpStatusCode.NoContent {
-                        description = "No delete action was performed on server. Possibly resource does not exist. Response body is empty."
+                        description =
+                            "No delete action was performed on server. Possibly resource does not exist. Response body is empty."
                     }
                     HttpStatusCode.NotFound {
                         description = "Resource didn't match handler"
@@ -149,12 +150,8 @@ fun Application.dictionaryRoutes() {
                     ?: throw MissingRequestBodyException("")
 
                 log.info("Incrementing counter {} by {}", counterName, incrementDto.count)
-                val updatedCount = counterService.increment(counterName, incrementDto.count)
-                if (updatedCount > 0) {
-                    call.respond(HttpStatusCode.OK)
-                } else {
-                    call.respond(HttpStatusCode.NoContent)
-                }
+                val updatedCounter = counterService.increment(counterName, incrementDto.count)
+                call.respond(HttpStatusCode.OK, updatedCounter)
 
             }.describe {
                 summary = "Increment a counter for the specified value"
@@ -168,11 +165,8 @@ fun Application.dictionaryRoutes() {
                     HttpStatusCode.OK {
                         description = "Counter was incremented"
                     }
-                    HttpStatusCode.NoContent {
-                        description = "Counter was not incremented"
-                    }
                     HttpStatusCode.BadRequest {
-                        description = "Missing request body"
+                        description = "Missing request body or increment value"
                         schema = jsonSchema<ErrorResponse>()
                     }
                     HttpStatusCode.InternalServerError {
@@ -192,12 +186,8 @@ fun Application.dictionaryRoutes() {
                     ?: throw MissingRequestBodyException("")
 
                 log.info("Incrementing counter {} by {}", counterName, incrementDto.count)
-                val updatedCount = counterService.incrementUnsafe(counterName, incrementDto.count)
-                if (updatedCount > 0) {
-                    call.respond(HttpStatusCode.OK)
-                } else {
-                    call.respond(HttpStatusCode.NoContent)
-                }
+                val updatedCounter = counterService.incrementUnsafe(counterName, incrementDto.count)
+                call.respond(HttpStatusCode.OK, updatedCounter)
             }.describe {
                 summary = "Increment a counter for the specified value"
                 description = """
@@ -213,11 +203,8 @@ fun Application.dictionaryRoutes() {
                     HttpStatusCode.OK {
                         description = "Counter was incremented"
                     }
-                    HttpStatusCode.NoContent {
-                        description = "Counter was not incremented"
-                    }
                     HttpStatusCode.BadRequest {
-                        description = "Missing request body"
+                        description = "Missing request body or increment value"
                         schema = jsonSchema<ErrorResponse>()
                     }
                     HttpStatusCode.NotFound {

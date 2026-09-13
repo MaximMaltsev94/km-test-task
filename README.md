@@ -11,6 +11,7 @@
     - [5.2.1 CLI overview](#521-cli-overview)
     - [5.2.2 CLI commands overview](#522-cli-commands-overview)
 - [6. API design](#6-api-design)
+- [7. Concurrent increment correctness](#7-concurrent-increment-correctness)
 
 # 1. Prerequisites
 - JDK 25
@@ -22,6 +23,8 @@
   - Liquibase xml migration scripts. Create database schema creation and initial data
 - `docker`
   - app images Dockerfiles, docker compose file and workdir for dependencies
+- `docs`
+  - OpenAPI specification yaml
 - `km-test-task-client`
   - Kotlin CLI application for running concurrent test scenarios.
   - Performs concurrent REST API calls to server app
@@ -148,11 +151,13 @@ Invokes get all API and prints all counters to console
 6. Main thread prints report with actual / expected counter value
 ```
 Finished counter increment:
-Counter name:         c69eff3a-d0ff-4b88-82eb-75db3850a80a
-Initial value:        496
-expected increment:   30000
-expected value:       30496
-actual value:         30496
+Counter name:                c69eff3a-d0ff-4b88-82eb-75db3850a80a
+Initial value:               496
+expected increment:          30000
+expected value:              30496
+actual value:                30496
+total increment operations:  30000
+unique response counters:    30000
 ```
 
 ##### Concurrent Increment scenario - unsafe update operation
@@ -160,11 +165,13 @@ actual value:         30496
 Same as command `2`, but API without concurrency control is used. Lost updates possible
 ```
 Finished counter increment:
-Counter name:         bde42eeb-7a0c-49ad-8872-c0719b0f001b
-Initial value:        689
-expected increment:   30000
-expected value:       30689
-actual value:         987
+Counter name:                bde42eeb-7a0c-49ad-8872-c0719b0f001b
+Initial value:               689
+expected increment:          30000
+expected value:              30689
+actual value:                987
+total increment operations:  30000
+unique response counters:    30000
 ```
 
 ##### Concurrent Insert
@@ -214,4 +221,15 @@ Operation is not idempotent - consecutive re-tries increment counter more and mo
 - `POST /api/v1/dictionaries/default/counters/{name}/increments`
 - `POST /api/v1/dictionaries/default/counters/{name}/increments-unsafe`
 
+# 7. Concurrent increment correctness
+
+Increment operation runs as atomic sql update operation at READ COMMITED transaction isolation level.
+
+PostgreSQL guarantees `value = value + 1` will be atomically run on newest version of row on READ COMMITED isolation level.
+```sql
+UPDATE counters
+SET value = value + 1
+WHERE name = '{name}'
+RETURNING name, value
+```
 

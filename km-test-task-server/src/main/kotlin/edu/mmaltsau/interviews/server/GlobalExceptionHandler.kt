@@ -6,7 +6,6 @@ import edu.mmaltsau.interviews.server.exceptions.ResourceNotFoundException
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
-import io.ktor.server.application.log
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.statuspages.StatusPages
@@ -57,7 +56,7 @@ fun Application.configureExceptionHandling() {
             )
         }
 
-        exception<DomainException> { call , cause ->
+        exception<DomainException> { call, cause ->
             log.error("Generic domain exception.", cause)
             call.respond(
                 HttpStatusCode.InternalServerError,

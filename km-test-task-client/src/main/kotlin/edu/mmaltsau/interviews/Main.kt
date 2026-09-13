@@ -8,7 +8,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.Scanner
+import java.util.*
 
 suspend fun main() {
     val log = LoggerFactory.getLogger("main")
@@ -24,7 +24,7 @@ suspend fun main() {
         install(Logging)
     }
 
-    val appHost = System.getenv("APP_HOST") ?: "http://localhost:44555"
+    val appHost = System.getenv("APP_HOST") ?: "http://localhost:8080"
     val countersV1RestClient = CountersV1RestClient(appHost, client)
     val appScenarios = ClientAppScenarios(countersV1RestClient)
 

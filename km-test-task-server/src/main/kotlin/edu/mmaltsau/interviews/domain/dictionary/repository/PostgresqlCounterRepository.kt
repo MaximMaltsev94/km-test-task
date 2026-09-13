@@ -2,18 +2,19 @@ package edu.mmaltsau.interviews.domain.dictionary.repository
 
 import edu.mmaltsau.interviews.domain.dictionary.model.Counter
 import edu.mmaltsau.interviews.server.exceptions.RepositoryInsertConflictException
-import io.r2dbc.spi.R2dbcDataIntegrityViolationException
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.singleOrNull
 import kotlinx.coroutines.flow.toList
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
 import org.jetbrains.exposed.v1.r2dbc.deleteWhere
 import org.jetbrains.exposed.v1.r2dbc.insert
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
-import org.jetbrains.exposed.v1.r2dbc.update
+import org.jetbrains.exposed.v1.r2dbc.updateReturning
 
 class PostgresqlCounterRepository(private val db: R2dbcDatabase) : CounterRepository {
 
@@ -34,10 +35,8 @@ class PostgresqlCounterRepository(private val db: R2dbcDatabase) : CounterReposi
     override suspend fun find(name: String): Counter? = suspendTransaction(db) {
         Counters.selectAll()
             .where { Counters.name eq name }
-            .mapNotNull {
-                Counter(it[Counters.name], it[Counters.value])
-            }
             .singleOrNull()
+            ?.toCounter()
     }
 
     override suspend fun insert(
@@ -63,32 +62,29 @@ class PostgresqlCounterRepository(private val db: R2dbcDatabase) : CounterReposi
     override suspend fun update(
         name: String,
         value: Int
-    ): Int = suspendTransaction(db) {
+    ): Counter? = suspendTransaction(db) {
 
-        Counters.update({ Counters.name eq name }) {
+        Counters.updateReturning(where = { Counters.name eq name }) {
             it[Counters.value] = value
         }
+            .singleOrNull()
+            ?.toCounter()
     }
 
     override suspend fun delete(name: String) = suspendTransaction(db) {
         Counters.deleteWhere { Counters.name eq name }
     }
 
-    override suspend fun increaseValue(name: String, incValue: Int): Int = suspendTransaction(db) {
-        val lockedCounter = Counters.selectAll()
-            .where { Counters.name eq name }
-            .forUpdate()
+    override suspend fun increaseValue(name: String, incValue: Int): Counter? = suspendTransaction(db) {
+        Counters.updateReturning(where = { Counters.name eq name }) {
+            it[Counters.value] = Counters.value + incValue
+        }
             .singleOrNull()
-
-        if (lockedCounter == null) {
-            return@suspendTransaction 0
-        }
-
-        val currentValue = lockedCounter[Counters.value]
-        Counters.update({ Counters.name eq name }) {
-            it[Counters.value] = currentValue + incValue
-        }
+            ?.toCounter()
 
     }
 
+    private fun ResultRow.toCounter(): Counter = Counter(this[Counters.name], this[Counters.value])
+
 }
+

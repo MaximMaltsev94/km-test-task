@@ -15,7 +15,8 @@ import org.slf4j.LoggerFactory
 
 class CountersV1RestClient(
     private val baseHost: String,
-    private val httpClient: HttpClient) {
+    private val httpClient: HttpClient
+) {
 
     companion object {
         private const val BASE_API = "/api/v1/dictionaries/default/counters"
@@ -37,18 +38,18 @@ class CountersV1RestClient(
         }.body()
     }
 
-    suspend fun increment(name: String, incValue: Int){
-        httpClient.post("$baseHost$BASE_API/$name/increments") {
+    suspend fun increment(name: String, incValue: Int): CounterV1ResponseDto {
+        return httpClient.post("$baseHost$BASE_API/$name/increments") {
             contentType(ContentType.Application.Json)
             setBody(CounterIncrementRequestDto(incValue))
-        }
+        }.body()
     }
 
-    suspend fun incrementUnsafe(name: String, incValue: Int){
-        httpClient.post("$baseHost$BASE_API/$name/increments-unsafe") {
+    suspend fun incrementUnsafe(name: String, incValue: Int): CounterV1ResponseDto {
+        return httpClient.post("$baseHost$BASE_API/$name/increments-unsafe") {
             contentType(ContentType.Application.Json)
             setBody(CounterIncrementRequestDto(incValue))
-        }
+        }.body()
     }
 
 }

@@ -1,5 +1,6 @@
 package edu.mmaltsau.interviews
 
+import edu.mmaltsau.interviews.dto.CounterV1ResponseDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -9,6 +10,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
@@ -104,7 +106,7 @@ class ClientAppScenarios(
 
 
     private suspend fun concurrentIncrementScenarioInternal(
-        incrementApiCall: suspend (counterName: String, incrementValue: Int) -> Unit
+        incrementApiCall: suspend (counterName: String, incrementValue: Int) -> CounterV1ResponseDto
     ) {
 
         val concurrentIncrementsScope = CoroutineScope(Job() + Dispatchers.IO)
@@ -132,13 +134,15 @@ class ClientAppScenarios(
             numAttempts, concurrency, incrementValue, numAttempts * operationsDelaySeconds.toInt(DurationUnit.SECONDS)
         )
 
+        val responseCounterValues = ConcurrentHashMap<String, String>()
         (1..numAttempts).forEach {
             val latchSignal = CompletableDeferred<Unit>()
 
             val coroutines = (1..concurrency).map {
                 concurrentIncrementsScope.async {
                     latchSignal.await()
-                    incrementApiCall(counterName, incrementValue)
+                    val counterResponse = incrementApiCall(counterName, incrementValue)
+                    responseCounterValues.put("${counterResponse.value}", "fake_value")
                 }
             }
 
@@ -154,16 +158,20 @@ class ClientAppScenarios(
 
         val expectedIncrement = numAttempts * concurrency * incrementValue
         val expectedValue = initialValue + expectedIncrement
+        val uniqueResponseCounterValues = responseCounterValues.size
         log.info(
             """\n
             Finished counter increment:
-            Counter name:         {}
-            Initial value:        {}
-            expected increment:   {}
-            expected value:       {}
-            actual value:         {}
+            Counter name:                {}
+            Initial value:               {}
+            expected increment:          {}
+            expected value:              {}
+            actual value:                {}
+            total increment operations:  {}
+            unique response counters:    {}
             """.trimIndent(),
-            counterName, initialValue, expectedIncrement, expectedValue, incrementedCounter.value
+            counterName, initialValue, expectedIncrement, expectedValue, incrementedCounter.value,
+            concurrency * numAttempts, uniqueResponseCounterValues
         )
 
     }

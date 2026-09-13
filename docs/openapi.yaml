@@ -1,0 +1,306 @@
+openapi: 3.1.1
+info:
+  title: Untitled API
+  version: 1.0.0
+paths:
+  /:
+    get:
+      summary: ""
+      responses:
+        "200":
+          description: ""
+          content:
+            text/plain: {}
+  /{name}:
+    get:
+      summary: ""
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalGreeting"
+  /json/kotlinx-serialization:
+    get:
+      summary: ""
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+  /api/v1/dictionaries/default/counters:
+    get:
+      tags:
+      - counters
+      summary: Get all counters in the dictionary
+      responses:
+        "200":
+          description: List of all counters. Empty list if dictionary has no counters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Counter"
+        "404":
+          description: Dictionary resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/dictionaries/default/counters/{counterName}:
+    put:
+      tags:
+      - counters
+      summary: Create a new counter
+      description: Creates a counter with the specified name. Does not allow override
+        existing value.
+      parameters:
+      - name: counterName
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CounterCreateRequestDto"
+      responses:
+        "200":
+          description: Counter was created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Counter"
+        "400":
+          description: Missing request body payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Counter with the specified name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+      - counters
+      summary: Delete a counter by name
+      parameters:
+      - name: counterName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Counter with the specified name was deleted. Response body
+            is empty.
+        "204":
+          description: No delete action was performed on server. Possibly resource
+            does not exist. Response body is empty.
+        "404":
+          description: Resource didn't match handler
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      tags:
+      - counters
+      summary: Get counter by name
+      parameters:
+      - name: counterName
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Counter object for the requested resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Counter"
+        "404":
+          description: Counter resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/dictionaries/default/counters/{counterName}/increments:
+    post:
+      tags:
+      - counters
+      summary: Increment a counter for the specified value
+      description: "Concurrency safe operation. lost update is mitigated \n- by read\
+        \ commited transaction isolation level\n- select for update pessimistic row\
+        \ level locking"
+      parameters:
+      - name: counterName
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CounterIncrementRequestDto"
+      responses:
+        "200":
+          description: Counter was incremented
+        "204":
+          description: Counter was not incremented
+        "400":
+          description: Missing request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/dictionaries/default/counters/{counterName}/increments-unsafe:
+    post:
+      tags:
+      - counters
+      summary: Increment a counter for the specified value
+      description: For demonstration purposes.
+
+        Concurrency Unsafe operation. Lost update is simulated by two sql statements
+        and application logic
+
+        1. select in separate transaction
+
+        2. increment in application
+
+        3. update in separate transaction
+      parameters:
+      - name: counterName
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CounterIncrementRequestDto"
+      responses:
+        "200":
+          description: Counter was incremented
+        "204":
+          description: Counter was not incremented
+        "400":
+          description: Missing request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Counter resource is not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+webhooks: {}
+components:
+  schemas:
+    PersonalGreeting:
+      type: object
+      title: PersonalGreeting
+      required:
+      - name
+      - content
+      properties:
+        name:
+          type: string
+        content:
+          type: string
+    Counter:
+      type: object
+      title: Counter
+      required:
+      - name
+      - value
+      properties:
+        name:
+          type: string
+        value:
+          type: integer
+    ErrorResponse:
+      type: object
+      title: ErrorResponse
+      required:
+      - code
+      - message
+      - timestampMs
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        timestampMs:
+          type: integer
+    CounterCreateRequestDto:
+      type: object
+      title: CounterCreateRequestDto
+      required:
+      - initialValue
+      properties:
+        initialValue:
+          type: integer
+    CounterIncrementRequestDto:
+      type: object
+      title: CounterIncrementRequestDto
+      properties:
+        count:
+          type:
+          - integer
+          - "null"
