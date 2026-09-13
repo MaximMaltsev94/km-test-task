@@ -2,9 +2,12 @@ package edu.mmaltsau.interviews.domain.dictionary.controller
 
 import edu.mmaltsau.interviews.domain.dictionary.dto.CounterCreateRequestDto
 import edu.mmaltsau.interviews.domain.dictionary.dto.CounterIncrementRequestDto
+import edu.mmaltsau.interviews.domain.dictionary.model.Counter
 import edu.mmaltsau.interviews.domain.dictionary.service.CounterService
+import edu.mmaltsau.interviews.server.ErrorResponse
 import edu.mmaltsau.interviews.server.exceptions.MissingRequestBodyException
 import io.ktor.http.HttpStatusCode
+import io.ktor.openapi.jsonSchema
 import io.ktor.server.application.Application
 import io.ktor.server.application.log
 import io.ktor.server.plugins.BadRequestException
@@ -33,6 +36,20 @@ fun Application.dictionaryRoutes() {
             }.describe {
                 summary = "Get all counters in the dictionary"
                 tag("counters")
+                responses {
+                    HttpStatusCode.OK {
+                        description = "List of all counters. Empty list if dictionary has no counters"
+                        schema = jsonSchema<Counter>()
+                    }
+                    HttpStatusCode.NotFound {
+                        description = "Dictionary resource not found"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                    HttpStatusCode.InternalServerError {
+                        description = "Internal server error"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                }
             }
 
             get("/counters/{counterName}") {
@@ -42,11 +59,23 @@ fun Application.dictionaryRoutes() {
             }.describe {
                 summary = "Get counter by name"
                 tag("counters")
+                responses {
+                    HttpStatusCode.OK {
+                        description = "Counter object for the requested resource"
+                        schema = jsonSchema<Counter>()
+                    }
+                    HttpStatusCode.NotFound {
+                        description = "Counter resource not found"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                    HttpStatusCode.InternalServerError {
+                        description = "Internal server error"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                }
             }
 
             put("/counters/{counterName}") {
-                // 409 conflict on already existing resource
-
                 val counterName = call.parameters["counterName"]
                     ?: throw BadRequestException("Required path parameter counterName is missing")
 
@@ -58,12 +87,26 @@ fun Application.dictionaryRoutes() {
                 call.respond(HttpStatusCode.OK, newCounter)
             }.describe {
                     summary = "Create a new counter"
+                    description = "Creates a counter with the specified name. Does not allow override existing value."
+                    tag("counters")
                     responses {
+                        HttpStatusCode.OK {
+                            description = "Counter was created"
+                            schema = jsonSchema<Counter>()
+                        }
+                        HttpStatusCode.BadRequest {
+                            description = "Missing request body payload"
+                            schema = jsonSchema<ErrorResponse>()
+                        }
                         HttpStatusCode.Conflict {
                             description = "Counter with the specified name already exists"
+                            schema = jsonSchema<ErrorResponse>()
+                        }
+                        HttpStatusCode.InternalServerError {
+                            description = "Internal server error"
+                            schema = jsonSchema<ErrorResponse>()
                         }
                     }
-                    tag("counters")
                 }
 
 
@@ -81,6 +124,22 @@ fun Application.dictionaryRoutes() {
             }.describe {
                 summary = "Delete a counter by name"
                 tag("counters")
+                responses {
+                    HttpStatusCode.OK {
+                        description = "Counter with the specified name was deleted. Response body is empty."
+                    }
+                    HttpStatusCode.NoContent {
+                        description = "No delete action was performed on server. Possibly resource does not exist. Response body is empty."
+                    }
+                    HttpStatusCode.NotFound {
+                        description = "Resource didn't match handler"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                    HttpStatusCode.InternalServerError {
+                        description = "Internal server error"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                }
             }
 
             post("/counters/{counterName}/increments") {
@@ -105,9 +164,26 @@ fun Application.dictionaryRoutes() {
                     - select for update pessimistic row level locking
                 """.trimIndent()
                 tag("counters")
+                responses {
+                    HttpStatusCode.OK {
+                        description = "Counter was incremented"
+                    }
+                    HttpStatusCode.NoContent {
+                        description = "Counter was not incremented"
+                    }
+                    HttpStatusCode.BadRequest {
+                        description = "Missing request body"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                    HttpStatusCode.InternalServerError {
+                        description = "Internal server error"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+
+                }
             }
 
-            post("/counters/{counterName}/increments/unsafe") {
+            post("/counters/{counterName}/increments-unsafe") {
                 // endpoint for test purposes to demonstrate concurrent increment errors
 
                 val counterName = call.parameters["counterName"] ?: throw NotFoundException()
@@ -132,6 +208,28 @@ fun Application.dictionaryRoutes() {
                    3. update in separate transaction
                 """.trimIndent()
                 tag("counters")
+
+                responses {
+                    HttpStatusCode.OK {
+                        description = "Counter was incremented"
+                    }
+                    HttpStatusCode.NoContent {
+                        description = "Counter was not incremented"
+                    }
+                    HttpStatusCode.BadRequest {
+                        description = "Missing request body"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                    HttpStatusCode.NotFound {
+                        description = "Counter resource is not found"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+                    HttpStatusCode.InternalServerError {
+                        description = "Internal server error"
+                        schema = jsonSchema<ErrorResponse>()
+                    }
+
+                }
             }
         }
     }

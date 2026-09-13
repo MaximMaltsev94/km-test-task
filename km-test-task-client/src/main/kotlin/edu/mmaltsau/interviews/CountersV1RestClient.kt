@@ -45,7 +45,7 @@ class CountersV1RestClient(
     }
 
     suspend fun incrementUnsafe(name: String, incValue: Int){
-        httpClient.post("$baseHost$BASE_API/$name/increments/unsafe") {
+        httpClient.post("$baseHost$BASE_API/$name/increments-unsafe") {
             contentType(ContentType.Application.Json)
             setBody(CounterIncrementRequestDto(incValue))
         }

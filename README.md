@@ -176,3 +176,30 @@ failed requests:      299
 actual counter:       616
 expected counter:     616
 ```
+
+
+# 6. API design 
+
+#### General idea
+- `/api/v1` - versioning
+- `/api/v1/dictionaries/default` - dictionaries resource with one "default" dictionary for now
+- `/api/v1/dictionaries/default/counters/{name}` - counters resource within the dictionary
+- `/api/v1/dictionaries/default/counters/{name}/increments` - ephemeral resource, collection of "increment" events for the counter
+
+#### Endpoints description
+Basic resource get / delete operations
+- `GET /api/v1/dictionaries/default/counters`
+- `GET /api/v1/dictionaries/default/counters/{name}`
+- `DELETE /api/v1/dictionaries/default/counters/{name}`
+
+Create resource with full resource URI - PUT.
+Operation is idempotent - re-try does not cause creation of new resource.
+- `PUT /api/v1/dictionaries/default/counters/{name}`
+
+
+Add "increment" event to collection without specifying full "increment" resource ID - POST. 
+Operation is not idempotent - consecutive re-tries increment counter more and more
+- `POST /api/v1/dictionaries/default/counters/{name}/increments`
+- `POST /api/v1/dictionaries/default/counters/{name}/increments-unsafe`
+
+
