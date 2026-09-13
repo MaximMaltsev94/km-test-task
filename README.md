@@ -171,7 +171,7 @@ expected increment:          30000
 expected value:              30689
 actual value:                987
 total increment operations:  30000
-unique response counters:    30000
+unique response counters:    308
 ```
 
 ##### Concurrent Insert
