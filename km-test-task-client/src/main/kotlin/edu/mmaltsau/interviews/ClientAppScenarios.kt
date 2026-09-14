@@ -2,15 +2,18 @@ package edu.mmaltsau.interviews
 
 import edu.mmaltsau.interviews.dto.CounterV1ResponseDto
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
@@ -22,8 +25,15 @@ data class CreateResult(
     val success: Boolean
 ) {}
 
+data class IncrementResult(
+    val counterName: String,
+    val value: Int,
+    val success: Boolean
+)
+
 class ClientAppScenarios(
-    private val countersV1RestClient: CountersV1RestClient
+    private val countersV1RestClient: CountersV1RestClient,
+    private val scenarioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
     companion object {
@@ -56,8 +66,7 @@ class ClientAppScenarios(
         )
     }
 
-    suspend fun concurrentInsert() {
-        val concurrentCreateScope = CoroutineScope(Job() + Dispatchers.IO)
+    suspend fun concurrentInsert() = coroutineScope {
 
         val counterName = UUID.randomUUID().toString()
 
@@ -65,51 +74,62 @@ class ClientAppScenarios(
 
         log.info("Going to create counter {} in database {} times simultaneously", counterName, concurrency)
 
-        val coroutines = (1..concurrency).map {
-            concurrentCreateScope.async {
-                val initialValue = Random.nextInt(100, 1000)
-                try {
-                    countersV1RestClient.create(counterName, initialValue)
+        val successInsertsValues = CopyOnWriteArrayList<Int>()
+        val failedInsertsValues = CopyOnWriteArrayList<Int>()
 
-                    log.info("Successfully created counter #{} with initial value {}", it, initialValue)
-                    return@async CreateResult(counterName, initialValue, true)
-                } catch (e: Exception) {
-                    log.info("Failed to create counter #{} with initial value {}", it, initialValue)
-                    return@async CreateResult(counterName, initialValue, false)
+
+        try {
+
+            withTimeout(300.seconds) {
+                (1..concurrency).map {
+                    launch(scenarioDispatcher) {
+                        val initialValue = Random.nextInt(100, 1000)
+                        try {
+                            countersV1RestClient.create(counterName, initialValue)
+
+                            log.info("Successfully created counter #{} with initial value {}", it, initialValue)
+                            successInsertsValues.add(initialValue)
+                        } catch (e: Exception) {
+                            log.info("Failed to create counter #{} with initial value {}", it, initialValue)
+                            failedInsertsValues.add(initialValue)
+                        }
+                    }
                 }
-            }
+
+            }.joinAll()
+
+            val successfullyCreatedCounter = "${successInsertsValues.firstOrNull() ?: "N/A"}"
+
+            val successfulAttempts = successInsertsValues.size
+            val failedAttempts = failedInsertsValues.size
+
+            val actualCounter = countersV1RestClient.get(counterName)
+
+            log.info("Finished executing coroutines with total successful executions: {}", successfulAttempts)
+            log.info(
+                """\n
+                    Finished concurrent creation of items:
+                    Counter name:         {}
+                    total requests:       {}
+                    successful requests:  {}
+                    failed requests:      {}
+                    actual counter:       {}
+                    expected counter:     {}
+                """.trimIndent(),
+                counterName, concurrency, successfulAttempts, failedAttempts,
+                actualCounter.value, successfullyCreatedCounter
+            )
+
+        } catch (e: CancellationException) {
+            log.error("Scenario didn't finish in 300 seconds timeout", e)
         }
 
-        val executionResults = coroutines.awaitAll()
-        val successfullyCreatedCounter = executionResults.firstOrNull { it.success }
-
-        val successfulAttempts = executionResults.count { it.success }
-        val failedAttempts = executionResults.count { !it.success }
-
-        val actualCounter = countersV1RestClient.get(counterName)
-
-        log.info("Finished executing coroutines with total successful executions: {}", successfulAttempts)
-        log.info(
-            """\n
-            Finished concurrent creation of items:
-            Counter name:         {}
-            total requests:       {}
-            successful requests:  {}
-            failed requests:      {}
-            actual counter:       {}
-            expected counter:     {}
-        """.trimIndent(),
-            counterName, concurrency, successfulAttempts, failedAttempts,
-            actualCounter.value, successfullyCreatedCounter?.value ?: -1
-        )
     }
 
 
     private suspend fun concurrentIncrementScenarioInternal(
         incrementApiCall: suspend (counterName: String, incrementValue: Int) -> CounterV1ResponseDto
-    ) {
-
-        val concurrentIncrementsScope = CoroutineScope(Job() + Dispatchers.IO)
+    ) = coroutineScope {
 
 
         val counterName = UUID.randomUUID().toString()
@@ -134,21 +154,35 @@ class ClientAppScenarios(
             numAttempts, concurrency, incrementValue, numAttempts * operationsDelaySeconds.toInt(DurationUnit.SECONDS)
         )
 
-        val responseCounterValues = ConcurrentHashMap<String, String>()
-        (1..numAttempts).forEach {
+        val successResponseCounterValues = ConcurrentHashMap.newKeySet<Int>()
+        val failedResponseCoroutineIds = ConcurrentHashMap.newKeySet<Int>()
+
+        (1..numAttempts).forEach { iAttempt ->
             val latchSignal = CompletableDeferred<Unit>()
 
-            val coroutines = (1..concurrency).map {
-                concurrentIncrementsScope.async {
-                    latchSignal.await()
-                    val counterResponse = incrementApiCall(counterName, incrementValue)
-                    responseCounterValues.put("${counterResponse.value}", "fake_value")
+            val coroutines = (1..concurrency).map { coroutineId ->
+                launch(scenarioDispatcher) {
+                    try {
+                        latchSignal.await()
+                        val counterResponse = incrementApiCall(counterName, incrementValue)
+                        successResponseCounterValues.add(counterResponse.value)
+                    } catch (e: Exception) {
+                        failedResponseCoroutineIds.add(iAttempt * 1000 + coroutineId)
+                    }
                 }
             }
 
             latchSignal.complete(Unit)
-            coroutines.awaitAll()
-            printCompletionPercent(it, numAttempts)
+
+            try {
+                withTimeout(300.seconds) {
+                    coroutines.joinAll()
+                }
+            } catch (e: CancellationException) {
+                log.error("Scenario didn't finish in 300 seconds timeout", e)
+            }
+
+            printCompletionPercent(iAttempt, numAttempts)
             delay(1.seconds)
 
         }
@@ -158,7 +192,7 @@ class ClientAppScenarios(
 
         val expectedIncrement = numAttempts * concurrency * incrementValue
         val expectedValue = initialValue + expectedIncrement
-        val uniqueResponseCounterValues = responseCounterValues.size
+        val uniqueResponseCounterValues = successResponseCounterValues.size
         log.info(
             """\n
             Finished counter increment:
